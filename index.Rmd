@@ -1,0 +1,266 @@
+---
+title: "Uninsured and in poverty"
+author: "Andrew Ba Tran"
+date: "September 13, 2016"
+output: html_document
+---
+
+```{r setup, message=F, warning=F}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(extrafont)
+library(ggalt)
+library(scales)
+library(gridExtra)
+library(grid)
+library(ggalt)
+library(choroplethr)
+
+```
+
+```{r distribution, fig.width=8, fig.height=5}
+
+# Income distribution
+
+dist <- read.csv("data/distribution.csv")
+dist <- dist[,1:5]
+dist_long <- dist %>%
+  gather("Income", "Total", 2:5) %>%
+  arrange(Year)
+
+dist_long$Income <- gsub("X", "", dist_long$Income)
+dist_long$Income <- gsub("\\.", " ", dist_long$Income)
+dist_long$Income <- gsub("  ", " ", dist_long$Income)
+dist_long$Income <- str_trim(dist_long$Income)
+
+edu_colors <- c('#1b9e77', '#d95f02', '#7570b3', '#e7298a')
+names(edu_colors) <- unique(dist_long$Income)
+
+colnames(dist) <- gsub("X", "",colnames(dist))
+colnames(dist) <- gsub("\\.", " ",colnames(dist))
+colnames(dist) <- gsub("  ", " ", colnames(dist))
+colnames(dist) <- str_trim(colnames(dist))
+
+
+last_vals <- sapply(colnames(dist)[2:5], function(x) first(na.exclude(dist[,x])))
+last_date <- c(2015, 2015, 2015, 2015)
+
+# jobs change (monthly)
+
+gg <- ggplot(dist_long)
+gg <- gg + geom_hline(yintercept = 0)
+gg <- gg + geom_line(aes(x=Year, y=Total, group=Income, color=Income))
+#gg <- gg + geom_rect(aes(xmin=as.numeric(ymd("2007-12-01")), xmax=as.numeric(ymd("2010-01-01")), ymin=-Inf, ymax=Inf))
+gg <- gg + annotate("rect", xmin = 2007, xmax =2010, ymin = -Inf, ymax = Inf,
+                    alpha = .1)
+gg <- gg + scale_color_manual(name="", values=edu_colors)
+gg <- gg + scale_y_continuous(labels = scales::dollar)
+#gg <- gg + scale_y_continuous(label=percent)
+gg <- gg + labs(x=NULL, y=NULL, title="Real household income at selected percentiles",
+                subtitle="Income in thousands (2015 dollars).",
+                caption="SOURCE: U.S. Census \nAndrew Ba Tran/TrendCT.org")
+gg <- gg + theme_bw(base_family="Helvetica")
+gg <- gg + theme(axis.ticks.y=element_blank())
+gg <- gg + theme(panel.border=element_blank())
+gg <- gg + theme(legend.key=element_blank())
+gg <- gg + theme(plot.title=element_text(face="bold", family="Lato Black", size=22))
+gg <- gg + theme(plot.caption=element_text(face="bold", family="Lato", size=9, color="gray", margin=margin(t=10, r=80)))
+gg <- gg + theme(legend.position="none")
+gg <- gg + theme(plot.margin = unit(c(1, 15, 1, 1), "lines"))
+gg
+
+for (i in 1:length(last_vals)) {
+  gg <- gg + annotation_custom(grob=textGrob(paste0(names(last_vals)[i], " ($", formatC(round(last_vals[i],1), format="d", big.mark=','), ")"), hjust=-.3,
+                                             gp=gpar(fontsize=10, 
+                                                     col=edu_colors[names(last_vals)[i]])),
+                               xmin=as.numeric(last_date[i]),xmax=as.numeric(last_date[i]),
+                               ymin=last_vals[i], ymax=last_vals[i])
+}
+
+gb <- ggplot_build(gg)
+gt <- ggplot_gtable(gb)
+
+gt$layout$clip[gt$layout$name=="panel"] <- "off"
+grid.draw(gt)
+
+```
+
+# Median wages for men and women
+
+```{r men_women,  fig.width=8, fig.height=5}
+
+dist <- read.csv("data/menwomen.csv")
+dist_long <- dist %>%
+  gather("Gender", "Wage", 2:3) %>%
+  arrange(Year)
+
+edu_colors <- c('#1b9e77', '#d95f02')
+names(edu_colors) <- unique(dist_long$Gender)
+
+last_vals <- sapply(colnames(dist)[2:3], function(x) first(na.exclude(dist[,x])))
+last_date <- c(2015, 2015)
+
+# median wage, men and women
+
+gg <- ggplot(dist_long)
+gg <- gg + geom_hline(yintercept = 0)
+gg <- gg + geom_line(aes(x=Year, y=Wage, group=Gender, color=Gender))
+gg <- gg + annotate("rect", xmin = 2007, xmax =2010, ymin = -Inf, ymax = Inf,
+                    alpha = .1)
+gg <- gg + scale_color_manual(name="", values=edu_colors)
+gg <- gg + scale_y_continuous(labels = scales::dollar)
+gg <- gg + labs(x=NULL, y=NULL, title="Real median earnings for men and women",
+                subtitle="For full-time, year-round workers. In 2015 dollars. The wage gap continues to shrink.",
+                caption="SOURCE: U.S. Census \nAndrew Ba Tran/TrendCT.org")
+gg <- gg + theme_bw(base_family="Helvetica")
+gg <- gg + theme(axis.ticks.y=element_blank())
+gg <- gg + theme(panel.border=element_blank())
+gg <- gg + theme(legend.key=element_blank())
+gg <- gg + theme(plot.title=element_text(face="bold", family="Lato Black", size=22))
+gg <- gg + theme(plot.caption=element_text(face="bold", family="Lato", size=9, color="gray", margin=margin(t=10, r=80)))
+gg <- gg + theme(legend.position="none")
+gg <- gg + theme(plot.margin = unit(c(1, 15, 1, 1), "lines"))
+gg
+
+for (i in 1:length(last_vals)) {
+  gg <- gg + annotation_custom(grob=textGrob(paste0(names(last_vals)[i], " ($", formatC(round(last_vals[i],1), format="d", big.mark=','), ")"), hjust=-.3,
+                                             gp=gpar(fontsize=10, 
+                                                     col=edu_colors[names(last_vals)[i]])),
+                               xmin=as.numeric(last_date[i]),xmax=as.numeric(last_date[i]),
+                               ymin=last_vals[i], ymax=last_vals[i])
+}
+
+gb <- ggplot_build(gg)
+gt <- ggplot_gtable(gb)
+
+gt$layout$clip[gt$layout$name=="panel"] <- "off"
+grid.draw(gt)
+```
+
+# Diff between 2014 and 2015
+
+```{r 3_year_uninsured,  fig.width=7, fig.height=10}
+
+unin <- read.csv("data/uninsured.csv")
+
+unin <- arrange(unin, diff1514)
+unin$State <- factor(unin$State, levels=unique(unin$State))
+
+gg <- ggplot()
+gg <- gg + geom_segment(data=unin, aes(y=State, yend=State, x=0, xend=20), color="#b2b2b2", size=0.15)
+gg <- gg + geom_dumbbell(data=unin, aes(y=State, x=percent2014, xend=percent2015),
+                         size=1.5, color="#b2b2b2", point.size.l=3, point.size.r=3,
+                         point.colour.l="#476b6b", point.colour.r="#cc0052")
+# text below points
+gg <- gg + geom_text(data=filter(unin, State=="South Dakota"),
+                     aes(x=percent2014, y=State, label="2014"),
+                     color="#476b6b", size=3, vjust=-2, hjust =1, fontface="bold", family="Helvetica")
+gg <- gg + geom_text(data=filter(unin, State=="South Dakota"),
+                     aes(x=percent2015, y=State, label="2015"),
+                     color="#cc0052", size=3, vjust=-2, hjust=-.1, fontface="bold", family="Helvetica")
+# text above points
+gg <- gg + geom_text(data=unin, aes(x=percent2014, y=State, label=percent2014),
+                     color="#476b6b", size=2.75, vjust=2.5, family="Helvetica")
+gg <- gg + geom_text(data=unin, color="#cc0052", size=2.75, vjust=2.5, family="Helvetica",
+                     aes(x=percent2015, y=State, label=percent2015))
+# difference column
+gg <- gg + geom_rect(data=unin, aes(xmin=20, xmax=21, ymin=-Inf, ymax=Inf), fill="#efefe3")
+gg <- gg + geom_text(data=unin, aes(label=round(diff1514,2), y=State, x=20.5), fontface="bold", size=3, family="Helvetica")
+gg <- gg + geom_text(data=filter(unin, State=="South Dakota"), aes(x=20.5, y=State, label="Diff"),
+                     color="#7a7d7e", size=3.1, vjust=-2, fontface="bold", family="Helvetica")
+gg <- gg + scale_x_continuous(expand=c(0,0), limits=c(0, 21))
+gg <- gg + scale_y_discrete(expand=c(0.075,0))
+gg <- gg + labs(x=NULL, y=NULL, title="Change in uninsured rates by state",
+                caption="Source: U.S. Census \nAndrew Ba Tran/TrendCT.org")
+gg <- gg + theme_bw(base_family="Helvetica")
+gg <- gg + theme(panel.grid.major=element_blank())
+gg <- gg + theme(panel.grid.minor=element_blank())
+gg <- gg + theme(panel.border=element_blank())
+gg <- gg + theme(axis.ticks=element_blank())
+gg <- gg + theme(axis.text.x=element_blank())
+gg <- gg + theme(plot.title=element_text(face="bold", family="Lato Black", size=22))
+gg <- gg + theme(plot.subtitle=element_text(face="italic", size=9, margin=margin(b=12)))
+gg <- gg + theme(plot.caption=element_text(size=7, margin=margin(t=12), color="#7a7d7e"))
+gg
+```
+
+# Map of uninsured 2015
+
+```{r choropleth_un, fig.width=8, fig.height=5 }
+
+unin_map1 <- unin[c("State", "percent2015")]
+colnames(unin_map1) <- c("region", "value")
+unin_map1$region <- str_to_lower(unin_map1$region)
+state_choropleth(unin_map1, title = "Uninsured rate in 2015")
+
+unin_map1 <- unin[c("State", "diff1514")]
+colnames(unin_map1) <- c("region", "value")
+unin_map1$region <- str_to_lower(unin_map1$region)
+state_choropleth(unin_map1, title = "Uninsured rate change between 2014 and 2015")
+```
+
+
+# Diff between 2013 and 2015
+
+```{r 2013_2015,  fig.width=7, fig.height=10}
+
+unin <- arrange(unin, diff1513)
+unin$State <- factor(unin$State, levels=unique(unin$State))
+
+gg <- ggplot()
+gg <- gg + geom_segment(data=unin, aes(y=State, yend=State, x=0, xend=23), color="#b2b2b2", size=0.15)
+gg <- gg + geom_dumbbell(data=unin, aes(y=State, x=percent2013, xend=percent2015),
+                         size=1.5, color="#b2b2b2", point.size.l=3, point.size.r=3,
+                         point.colour.l="#476b6b", point.colour.r="#cc0052")
+# text below points
+gg <- gg + geom_text(data=filter(unin, State=="Massachusetts"),
+                     aes(x=percent2013, y=State, label="2013"),
+                     color="#476b6b", size=3, vjust=-2, hjust =-.1, fontface="bold", family="Helvetica")
+gg <- gg + geom_text(data=filter(unin, State=="Massachusetts"),
+                     aes(x=percent2015, y=State, label="2015"),
+                     color="#cc0052", size=3, vjust=-2, hjust=1, fontface="bold", family="Helvetica")
+# text above points
+gg <- gg + geom_text(data=unin, aes(x=percent2013, y=State, label=percent2013),
+                     color="#476b6b", size=2.75, vjust=2.5, family="Helvetica")
+gg <- gg + geom_text(data=unin, color="#cc0052", size=2.75, vjust=2.5, family="Helvetica",
+                     aes(x=percent2015, y=State, label=percent2015))
+# difference column
+gg <- gg + geom_rect(data=unin, aes(xmin=23, xmax=24, ymin=-Inf, ymax=Inf), fill="#efefe3")
+gg <- gg + geom_text(data=unin, aes(label=round(diff1514,2), y=State, x=23.5), fontface="bold", size=3, family="Helvetica")
+gg <- gg + geom_text(data=filter(unin, State=="Massachusetts"), aes(x=23.5, y=State, label="Diff"),
+                     color="#7a7d7e", size=3.1, vjust=-2, fontface="bold", family="Helvetica")
+gg <- gg + scale_x_continuous(expand=c(0,0), limits=c(0, 24))
+gg <- gg + scale_y_discrete(expand=c(0.075,0))
+gg <- gg + labs(x=NULL, y=NULL, title="Change in uninsured rates by state, '13-'15",
+                caption="Source: U.S. Census \nAndrew Ba Tran/TrendCT.org")
+gg <- gg + theme_bw(base_family="Helvetica")
+gg <- gg + theme(panel.grid.major=element_blank())
+gg <- gg + theme(panel.grid.minor=element_blank())
+gg <- gg + theme(panel.border=element_blank())
+gg <- gg + theme(axis.ticks=element_blank())
+gg <- gg + theme(axis.text.x=element_blank())
+gg <- gg + theme(plot.title=element_text(face="bold", family="Lato Black", size=22))
+gg <- gg + theme(plot.subtitle=element_text(face="italic", size=9, margin=margin(b=12)))
+gg <- gg + theme(plot.caption=element_text(size=7, margin=margin(t=12), color="#7a7d7e"))
+gg
+```
+
+# Mapping poverty rates
+
+```{r choropleth1, fig.width=8, fig.height=5 }
+pov <- read.csv("data/poverty.csv")
+
+pov_map1 <- pov[c("State", "Percent")]
+colnames(pov_map1) <- c("region", "value")
+pov_map1$region <- str_to_lower(pov_map1$region)
+state_choropleth(pov_map1, title = "Poverty rate by state in 2015")
+
+pov_map1 <- pov[c("State", "Diff.Percent")]
+pov_map1$Diff.Percent <- as.numeric(pov_map1$Diff.Percent)
+colnames(pov_map1) <- c("region", "value")
+pov_map1$region <- str_to_lower(pov_map1$region)
+state_choropleth(pov_map1, title = "Poverty rate change between 2014 and 2015")
+
+```

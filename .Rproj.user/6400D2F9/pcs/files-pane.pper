@@ -1,0 +1,9 @@
+{
+    "path" : "~/Documents/Github/trendct-data/2016/08/census_poverty_insurance",
+    "sortOrder" : [
+        {
+            "ascending" : true,
+            "columnIndex" : 2
+        }
+    ]
+}
